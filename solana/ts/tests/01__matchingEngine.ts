@@ -53,7 +53,7 @@ import {
 
 chaiUse(chaiAsPromised);
 
-const SLOTS_PER_EPOCH = 32;
+const SLOTS_PER_EPOCH = 8;
 
 describe("Matching Engine", function () {
     const connection = new Connection(LOCALHOST, "confirmed");
@@ -1134,9 +1134,7 @@ describe("Matching Engine", function () {
                     },
                     auctionParams,
                 );
-                await expectIxOk(connection, [proposalIx], [ownerAssistant], {
-                    confirmOptions: { commitment: "finalized" },
-                });
+                await expectIxOk(connection, [proposalIx], [ownerAssistant]);
 
                 const proposalData = await engine
                     .proposalAddress(nextProposalId)
@@ -1172,9 +1170,7 @@ describe("Matching Engine", function () {
                     proposal,
                 });
 
-                await expectIxOk(connection, [ix], [owner], {
-                    confirmOptions: { commitment: "finalized" },
-                });
+                await expectIxOk(connection, [ix], [owner]);
             });
         });
     });
@@ -1566,6 +1562,8 @@ describe("Matching Engine", function () {
                 const auctionData = await engine.fetchAuction(vaaHash);
                 const { bump } = auctionData;
 
+                const { auctionConfigId } = await engine.fetchCustodian();
+
                 const offerToken = splToken.getAssociatedTokenAddressSync(
                     USDC_MINT_ADDRESS,
                     offerAuthorityOne.publicKey,
@@ -1581,7 +1579,7 @@ describe("Matching Engine", function () {
                         Array.from(vaaHash),
                         { active: {} },
                         {
-                            configId: 1,
+                            configId: auctionConfigId,
                             vaaSequence: bigintToU64BN(vaaAccount.emitterInfo().sequence),
                             sourceChain: ethChain,
                             bestOfferToken: offerToken,
@@ -1613,27 +1611,25 @@ describe("Matching Engine", function () {
 
             before("Create ATAs For Offer Authorities", async function () {
                 for (const wallet of [offerAuthorityOne, offerAuthorityTwo, liquidator]) {
-                    const destination = await splToken.createAccount(
-                        connection,
-                        wallet,
+                    const destination = splToken.getAssociatedTokenAddressSync(
                         USDC_MINT_ADDRESS,
                         wallet.publicKey,
-                        undefined,
+                    );
+                    const createIx = splToken.createAssociatedTokenAccountInstruction(
+                        payer.publicKey,
+                        destination,
+                        wallet.publicKey,
+                        USDC_MINT_ADDRESS,
                     );
 
-                    // Mint USDC.
                     const mintAmount = 10_000_000n * 1_000_000n;
-
-                    await expect(
-                        splToken.mintTo(
-                            connection,
-                            payer,
-                            USDC_MINT_ADDRESS,
-                            destination,
-                            payer,
-                            mintAmount,
-                        ),
-                    ).to.be.fulfilled;
+                    const mintIx = splToken.createMintToInstruction(
+                        USDC_MINT_ADDRESS,
+                        destination,
+                        payer.publicKey,
+                        mintAmount,
+                    );
+                    await expectIxOk(connection, [createIx, mintIx], [payer]);
 
                     const { amount } = await splToken.getAccount(connection, destination);
                     expect(amount).equals(mintAmount);
