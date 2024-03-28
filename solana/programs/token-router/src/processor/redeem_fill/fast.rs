@@ -1,81 +1,42 @@
 use crate::{
     composite::*,
-    error::TokenRouterError,
     state::{Custodian, FillType, PreparedFill, PreparedFillInfo},
 };
 use anchor_lang::{prelude::*, system_program};
-use anchor_spl::token;
-use common::{
-    messages::raw::{LiquidityLayerMessage, MessageToVec},
-    wormhole_cctp_solana::wormhole::{core_bridge_program, VaaAccount},
-};
+use common::messages::raw::{LiquidityLayerMessage, MessageToVec};
 
-/// Accounts required for [redeem_fast_fill].
 #[derive(Accounts)]
-pub struct RedeemFastFill<'info> {
-    #[account(mut)]
-    payer: Signer<'info>,
-
-    custodian: CheckedCustodian<'info>,
-
-    /// CHECK: Must be owned by the Wormhole Core Bridge program. This account will be read via
-    /// zero-copy using the [VaaAccount](core_bridge_program::sdk::VaaAccount) reader.
-    #[account(owner = core_bridge_program::id())]
-    vaa: AccountInfo<'info>,
-
-    #[account(
-        init_if_needed,
-        payer = payer,
-        space = compute_prepared_fill_size(&vaa)?,
-        seeds = [
-            PreparedFill::SEED_PREFIX,
-            VaaAccount::load(&vaa)?.digest().as_ref(),
-        ],
-        bump,
-    )]
-    prepared_fill: Account<'info, PreparedFill>,
-
-    /// Mint recipient token account, which is encoded as the mint recipient in the CCTP message.
-    /// The CCTP Token Messenger Minter program will transfer the amount encoded in the CCTP message
-    /// from its custody account to this account.
-    ///
-    /// CHECK: Mutable. Seeds must be \["custody"\].
-    #[account(
-        init_if_needed,
-        payer = payer,
-        token::mint = mint,
-        token::authority = custodian,
-        seeds = [
-            crate::PREPARED_CUSTODY_TOKEN_SEED_PREFIX,
-            prepared_fill.key().as_ref(),
-        ],
-        bump,
-    )]
-    prepared_custody_token: Account<'info, token::TokenAccount>,
-
-    /// CHECK: This mint must be USDC.
-    #[account(address = common::constants::USDC_MINT)]
-    mint: AccountInfo<'info>,
-
+struct CompleteFastFill<'info> {
     /// CHECK: Seeds must be \["emitter"] (Matching Engine program).
     #[account(mut)]
-    matching_engine_custodian: UncheckedAccount<'info>,
+    custodian: UncheckedAccount<'info>,
 
     /// CHECK: Mutable. Seeds must be \["redeemed", vaa_digest\] (Matching Engine program).
     #[account(mut)]
-    matching_engine_redeemed_fast_fill: UncheckedAccount<'info>,
+    redeemed_fast_fill: UncheckedAccount<'info>,
 
-    /// CHECK: Seeds must be \["endpoint", SOLANA_CHAIN.to_be_bytes()\] (Matching Engine program).
-    matching_engine_router_endpoint: UncheckedAccount<'info>,
+    /// Seeds must be \["endpoint", fill.source_chain().to_be_bytes()\] (Matching Engine program).
+    from_router_endpoint: Account<'info, matching_engine::state::RouterEndpoint>,
+
+    /// Seeds must be \["endpoint", SOLANA_CHAIN.to_be_bytes()\] (Matching Engine program).
+    to_router_endpoint: Account<'info, matching_engine::state::RouterEndpoint>,
 
     /// CHECK: Mutable. Seeds must be \["local-custody", source_chain.to_be_bytes()\]
     /// (Matching Engine program).
     #[account(mut)]
-    matching_engine_local_custody_token: UncheckedAccount<'info>,
+    local_custody_token: UncheckedAccount<'info>,
 
-    matching_engine_program: Program<'info, matching_engine::program::MatchingEngine>,
-    token_program: Program<'info, token::Token>,
-    system_program: Program<'info, System>,
+    program: Program<'info, matching_engine::program::MatchingEngine>,
+}
+
+/// Accounts required for [redeem_fast_fill].
+#[derive(Accounts)]
+pub struct RedeemFastFill<'info> {
+    custodian: CheckedCustodian<'info>,
+
+    prepared_fill: InitIfNeededPrepareFill<'info>,
+
+    matching_engine: CompleteFastFill<'info>,
 }
 
 /// This instruction reconciles a Wormhole CCTP deposit message with a CCTP message to mint tokens
@@ -91,39 +52,51 @@ pub fn redeem_fast_fill(ctx: Context<RedeemFastFill>) -> Result<()> {
 
 fn handle_redeem_fast_fill(ctx: Context<RedeemFastFill>) -> Result<()> {
     matching_engine::cpi::complete_fast_fill(CpiContext::new_with_signer(
-        ctx.accounts.matching_engine_program.to_account_info(),
+        ctx.accounts.matching_engine.program.to_account_info(),
         matching_engine::cpi::accounts::CompleteFastFill {
-            payer: ctx.accounts.payer.to_account_info(),
+            payer: ctx.accounts.prepared_fill.payer.to_account_info(),
             custodian: matching_engine::cpi::accounts::CheckedCustodian {
-                custodian: ctx.accounts.matching_engine_custodian.to_account_info(),
+                custodian: ctx.accounts.matching_engine.custodian.to_account_info(),
             },
             fast_fill_vaa: matching_engine::cpi::accounts::LiquidityLayerVaa {
-                vaa: ctx.accounts.vaa.to_account_info(),
+                vaa: ctx.accounts.prepared_fill.fill_vaa.to_account_info(),
             },
             redeemed_fast_fill: ctx
                 .accounts
-                .matching_engine_redeemed_fast_fill
+                .matching_engine
+                .redeemed_fast_fill
                 .to_account_info(),
             token_router_emitter: ctx.accounts.custodian.to_account_info(),
-            token_router_custody_token: ctx.accounts.prepared_custody_token.to_account_info(),
-            router_endpoint: matching_engine::cpi::accounts::LiveRouterEndpoint {
-                endpoint: ctx
-                    .accounts
-                    .matching_engine_router_endpoint
-                    .to_account_info(),
+            token_router_custody_token: ctx.accounts.prepared_fill.custody_token.to_account_info(),
+            router_path: matching_engine::cpi::accounts::LiveRouterPath {
+                from_endpoint: matching_engine::cpi::accounts::LiveRouterEndpoint {
+                    endpoint: ctx
+                        .accounts
+                        .matching_engine
+                        .from_router_endpoint
+                        .to_account_info(),
+                },
+                to_endpoint: matching_engine::cpi::accounts::LiveRouterEndpoint {
+                    endpoint: ctx
+                        .accounts
+                        .matching_engine
+                        .to_router_endpoint
+                        .to_account_info(),
+                },
             },
             local_custody_token: ctx
                 .accounts
-                .matching_engine_local_custody_token
+                .matching_engine
+                .local_custody_token
                 .to_account_info(),
-            token_program: ctx.accounts.token_program.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
+            token_program: ctx.accounts.prepared_fill.token_program.to_account_info(),
+            system_program: ctx.accounts.prepared_fill.system_program.to_account_info(),
         },
         &[Custodian::SIGNER_SEEDS],
     ))?;
 
-    let vaa = VaaAccount::load_unchecked(&ctx.accounts.vaa);
-    let fast_fill = LiquidityLayerMessage::try_from(vaa.payload())
+    let fill_vaa = &ctx.accounts.prepared_fill.fill_vaa.load_unchecked();
+    let fast_fill = LiquidityLayerMessage::try_from(fill_vaa.payload())
         .unwrap()
         .to_fast_fill_unchecked();
 
@@ -138,9 +111,9 @@ fn handle_redeem_fast_fill(ctx: Context<RedeemFastFill>) -> Result<()> {
         })?;
         system_program::transfer(
             CpiContext::new(
-                ctx.accounts.system_program.to_account_info(),
+                ctx.accounts.prepared_fill.system_program.to_account_info(),
                 system_program::Transfer {
-                    from: ctx.accounts.payer.to_account_info(),
+                    from: ctx.accounts.prepared_fill.payer.to_account_info(),
                     to: ctx.accounts.prepared_fill.to_account_info(),
                 },
             ),
@@ -150,34 +123,23 @@ fn handle_redeem_fast_fill(ctx: Context<RedeemFastFill>) -> Result<()> {
     }
 
     // Set prepared fill data.
-    ctx.accounts.prepared_fill.set_inner(PreparedFill {
-        info: PreparedFillInfo {
-            vaa_hash: vaa.digest().0,
-            bump: ctx.bumps.prepared_fill,
-            prepared_custody_token_bump: ctx.bumps.prepared_custody_token,
-            redeemer: Pubkey::from(fill.redeemer()),
-            prepared_by: ctx.accounts.payer.key(),
-            fill_type: FillType::FastFill,
-            source_chain: fill.source_chain(),
-            order_sender: fill.order_sender(),
-        },
-        redeemer_message: fill.message_to_vec(),
-    });
+    ctx.accounts
+        .prepared_fill
+        .prepared_fill
+        .set_inner(PreparedFill {
+            info: PreparedFillInfo {
+                vaa_hash: fill_vaa.digest().0,
+                bump: ctx.bumps.prepared_fill.prepared_fill,
+                prepared_custody_token_bump: ctx.bumps.prepared_fill.custody_token,
+                redeemer: Pubkey::from(fill.redeemer()),
+                prepared_by: ctx.accounts.prepared_fill.payer.key(),
+                fill_type: FillType::FastFill,
+                source_chain: fill.source_chain(),
+                order_sender: fill.order_sender(),
+            },
+            redeemer_message: fill.message_to_vec(),
+        });
 
     // Done.
     Ok(())
-}
-
-fn compute_prepared_fill_size(vaa_acc_info: &AccountInfo<'_>) -> Result<usize> {
-    let vaa = VaaAccount::load(vaa_acc_info)?;
-    let msg =
-        LiquidityLayerMessage::try_from(vaa.payload()).map_err(|_| TokenRouterError::InvalidVaa)?;
-
-    let fast_fill = msg.fast_fill().ok_or(TokenRouterError::InvalidPayloadId)?;
-    Ok(fast_fill
-        .fill()
-        .redeemer_message_len()
-        .try_into()
-        .map(PreparedFill::compute_size)
-        .unwrap())
 }

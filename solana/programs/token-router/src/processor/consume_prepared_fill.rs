@@ -1,5 +1,5 @@
 use crate::{
-    error::TokenRouterError,
+    composite::*,
     state::{Custodian, PreparedFill},
 };
 use anchor_lang::prelude::*;
@@ -8,16 +8,10 @@ use anchor_spl::token;
 /// Accounts required for [consume_prepared_fill].
 #[derive(Accounts)]
 pub struct ConsumePreparedFill<'info> {
-    /// Custodian, but does not need to be deserialized.
-    ///
-    /// CHECK: Seeds must be \["emitter"\].
-    #[account(
-        seeds = [Custodian::SEED_PREFIX],
-        bump = Custodian::BUMP,
-    )]
-    custodian: AccountInfo<'info>,
+    custodian: CheckedCustodian<'info>,
 
     /// This signer must be the same one encoded in the prepared fill.
+    #[account(address = prepared_fill.redeemer)]
     redeemer: Signer<'info>,
 
     /// CHECK: This recipient may not necessarily be the same one encoded in the prepared fill (as
@@ -30,7 +24,6 @@ pub struct ConsumePreparedFill<'info> {
     #[account(
         mut,
         close = rent_recipient,
-        has_one = redeemer @ TokenRouterError::RedeemerMismatch,
     )]
     prepared_fill: Account<'info, PreparedFill>,
 

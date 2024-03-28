@@ -50,7 +50,7 @@ pub struct CompleteFastFill<'info> {
     )]
     redeemed_fast_fill: Account<'info, RedeemedFastFill>,
 
-    #[account(address = Pubkey::from(router_endpoint.address))]
+    #[account(address = Pubkey::from(router_path.to_endpoint.address))]
     token_router_emitter: Signer<'info>,
 
     #[account(
@@ -62,31 +62,36 @@ pub struct CompleteFastFill<'info> {
 
     #[account(
         constraint = {
+            let vaa = fast_fill_vaa.load_unchecked();
+            let msg = LiquidityLayerMessage::try_from(vaa.payload()).unwrap();
+
+            // Is this a fast fill?
+            let fast_fill = msg
+                .fast_fill()
+                .ok_or(MatchingEngineError::InvalidPayloadId)?;
+
             require_eq!(
-                router_endpoint.chain,
-                SOLANA_CHAIN,
-                MatchingEngineError::InvalidEndpoint
+                router_path.from_endpoint.chain,
+                fast_fill.fill().source_chain(),
+                MatchingEngineError::InvalidSourceRouter,
             );
+
+            require_eq!(
+                router_path.to_endpoint.chain,
+                SOLANA_CHAIN,
+                MatchingEngineError::InvalidTargetRouter,
+            );
+
             true
         }
     )]
-    router_endpoint: LiveRouterEndpoint<'info>,
+    router_path: LiveRouterPath<'info>,
 
     #[account(
         mut,
         seeds = [
             crate::LOCAL_CUSTODY_TOKEN_SEED_PREFIX,
-            {
-                let vaa = fast_fill_vaa.load_unchecked();
-                let msg = LiquidityLayerMessage::try_from(vaa.payload()).unwrap();
-
-                // Is this a fast fill?
-                let fast_fill = msg
-                    .fast_fill()
-                    .ok_or(MatchingEngineError::InvalidPayloadId)?;
-
-                &fast_fill.fill().source_chain().to_be_bytes()
-            },
+            &router_path.from_endpoint.chain.to_be_bytes(),
         ],
         bump,
     )]
@@ -118,12 +123,12 @@ pub fn complete_fast_fill(ctx: Context<CompleteFastFill>) -> Result<()> {
             token::Transfer {
                 from: ctx.accounts.local_custody_token.to_account_info(),
                 to: ctx.accounts.token_router_custody_token.to_account_info(),
-                authority: ctx.accounts.router_endpoint.to_account_info(),
+                authority: ctx.accounts.router_path.from_endpoint.to_account_info(),
             },
             &[&[
                 RouterEndpoint::SEED_PREFIX,
-                &ctx.accounts.router_endpoint.chain.to_be_bytes(),
-                &[ctx.accounts.router_endpoint.bump],
+                &ctx.accounts.router_path.from_endpoint.chain.to_be_bytes(),
+                &[ctx.accounts.router_path.from_endpoint.bump],
             ]],
         ),
         fast_fill.amount(),

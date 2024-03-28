@@ -686,7 +686,7 @@ describe("Token Router", function () {
                     connection,
                     [ix],
                     [ownerAssistant, orderSender],
-                    "Error Code: PreparedByMismatch",
+                    "prepared_by. Error Code: ConstraintAddress",
                 );
             });
 
@@ -702,7 +702,7 @@ describe("Token Router", function () {
                     connection,
                     [ix],
                     [payer, ownerAssistant],
-                    "Error Code: OrderSenderMismatch",
+                    "order_sender. Error Code: ConstraintAddress",
                 );
             });
 
@@ -721,7 +721,7 @@ describe("Token Router", function () {
                     connection,
                     [ix],
                     [payer, orderSender],
-                    "Error Code: RefundTokenMismatch",
+                    "refund_token. Error Code: ConstraintAddress",
                 );
             });
 

@@ -496,20 +496,36 @@ export class MatchingEngineProgram {
         };
     }
 
-    fastOrderPathComposite(accounts: { fastVaa: PublicKey; from: PublicKey; to: PublicKey }): {
+    liveEndpointPathComposite(accounts: { fromEndpoint: PublicKey; toEndpoint: PublicKey }): {
+        fromEndpoint: { endpoint: PublicKey };
+        toEndpoint: { endpoint: PublicKey };
+    } {
+        const { fromEndpoint, toEndpoint } = accounts;
+        return {
+            fromEndpoint: { endpoint: fromEndpoint },
+            toEndpoint: { endpoint: toEndpoint },
+        };
+    }
+
+    fastOrderPathComposite(accounts: {
+        fastVaa: PublicKey;
+        fromEndpoint: PublicKey;
+        toEndpoint: PublicKey;
+    }): {
         fastVaa: {
             vaa: PublicKey;
         };
-        from: {
-            endpoint: PublicKey;
+        path: {
+            fromEndpoint: {
+                endpoint: PublicKey;
+            };
+            toEndpoint: { endpoint: PublicKey };
         };
-        to: { endpoint: PublicKey };
     } {
-        const { fastVaa, from, to } = accounts;
+        const { fastVaa, fromEndpoint, toEndpoint } = accounts;
         return {
             fastVaa: { vaa: fastVaa },
-            from: { endpoint: from },
-            to: { endpoint: to },
+            path: this.liveEndpointPathComposite({ fromEndpoint, toEndpoint }),
         };
     }
 
@@ -634,7 +650,6 @@ export class MatchingEngineProgram {
                 payer: inputPayer ?? ownerOrAssistant,
                 admin: this.adminComposite(ownerOrAssistant, inputCustodian),
                 routerEndpoint: inputRouterEndpoint ?? this.routerEndpointAddress(chain),
-                localRouterEndpoint: this.routerEndpointAddress(wormholeSdk.CHAIN_ID_SOLANA),
                 localCustodyToken: this.localCustodyTokenAddress(chain),
                 remoteTokenMessenger: inputRemoteTokenMessenger ?? derivedRemoteTokenMessenger,
                 usdc: this.usdcComposite(),
@@ -969,8 +984,8 @@ export class MatchingEngineProgram {
                 auction,
                 fastOrderPath: this.fastOrderPathComposite({
                     fastVaa,
-                    from: fromRouterEndpoint,
-                    to: toRouterEndpoint,
+                    fromEndpoint: fromRouterEndpoint,
+                    toEndpoint: toRouterEndpoint,
                 }),
                 offerToken,
                 auctionCustodyToken,
@@ -1208,8 +1223,8 @@ export class MatchingEngineProgram {
                 }),
                 fastOrderPath: this.fastOrderPathComposite({
                     fastVaa,
-                    from: this.routerEndpointAddress(fastVaaAccount.emitterInfo().chain),
-                    to: toRouterEndpoint,
+                    fromEndpoint: this.routerEndpointAddress(fastVaaAccount.emitterInfo().chain),
+                    toEndpoint: toRouterEndpoint,
                 }),
                 auction,
                 wormhole: {
@@ -1276,8 +1291,8 @@ export class MatchingEngineProgram {
                 }),
                 fastOrderPath: this.fastOrderPathComposite({
                     fastVaa,
-                    from: this.routerEndpointAddress(fastVaaAccount.emitterInfo().chain),
-                    to: toRouterEndpoint,
+                    fromEndpoint: this.routerEndpointAddress(fastVaaAccount.emitterInfo().chain),
+                    toEndpoint: toRouterEndpoint,
                 }),
                 auction: this.auctionAddress(fastVaaAccount.digest()),
                 wormhole: {
@@ -1388,12 +1403,12 @@ export class MatchingEngineProgram {
                         },
                         { info },
                     ),
-                    toRouterEndpoint: this.routerEndpointComposite(toRouterEndpoint),
                     executorToken:
                         inputExecutorToken ?? splToken.getAssociatedTokenAddressSync(mint, payer),
                     initialOfferToken,
                 },
                 custodian: this.checkedCustodianComposite(custodian),
+                toRouterEndpoint: this.routerEndpointComposite(toRouterEndpoint),
                 wormhole: {
                     config: coreBridgeConfig,
                     emitterSequence: coreEmitterSequence,
@@ -1479,15 +1494,15 @@ export class MatchingEngineProgram {
                         },
                         { info },
                     ),
-                    toRouterEndpoint: this.routerEndpointComposite(
-                        inputToRouterEndpoint ??
-                            this.routerEndpointAddress(wormholeSdk.CHAIN_ID_SOLANA),
-                    ),
                     executorToken:
                         inputExecutorToken ??
                         splToken.getAssociatedTokenAddressSync(this.mint, payer),
                     initialOfferToken,
                 },
+                toRouterEndpoint: this.routerEndpointComposite(
+                    inputToRouterEndpoint ??
+                        this.routerEndpointAddress(wormholeSdk.CHAIN_ID_SOLANA),
+                ),
                 wormhole: {
                     config: coreBridgeConfig,
                     emitterSequence: coreEmitterSequence,

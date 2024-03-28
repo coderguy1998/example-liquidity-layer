@@ -46,12 +46,27 @@ export type MatchingEngine = {
           "isSigner": false
         },
         {
-          "name": "routerEndpoint",
+          "name": "routerPath",
           "accounts": [
             {
-              "name": "endpoint",
-              "isMut": false,
-              "isSigner": false
+              "name": "fromEndpoint",
+              "accounts": [
+                {
+                  "name": "endpoint",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ]
+            },
+            {
+              "name": "toEndpoint",
+              "accounts": [
+                {
+                  "name": "endpoint",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ]
             }
           ]
         },
@@ -375,22 +390,27 @@ export type MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -618,22 +638,27 @@ export type MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -857,18 +882,6 @@ export type MatchingEngine = {
           "name": "routerEndpoint",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "localRouterEndpoint",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Local router endpoint PDA.",
-            "",
-            "NOTE: This account may not exist yet. But we need to pass it since it will be the owner of",
-            "the local custody token account.",
-            ""
-          ]
         },
         {
           "name": "localCustodyToken",
@@ -1399,22 +1412,27 @@ export type MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -1562,6 +1580,16 @@ export type MatchingEngine = {
           ]
         },
         {
+          "name": "toRouterEndpoint",
+          "accounts": [
+            {
+              "name": "endpoint",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
           "name": "executeOrder",
           "accounts": [
             {
@@ -1595,16 +1623,6 @@ export type MatchingEngine = {
                 {
                   "name": "bestOfferToken",
                   "isMut": true,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "toRouterEndpoint",
-              "accounts": [
-                {
-                  "name": "endpoint",
-                  "isMut": false,
                   "isSigner": false
                 }
               ]
@@ -1791,6 +1809,16 @@ export type MatchingEngine = {
           ]
         },
         {
+          "name": "toRouterEndpoint",
+          "accounts": [
+            {
+              "name": "endpoint",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
           "name": "executeOrder",
           "accounts": [
             {
@@ -1824,16 +1852,6 @@ export type MatchingEngine = {
                 {
                   "name": "bestOfferToken",
                   "isMut": true,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "toRouterEndpoint",
-              "accounts": [
-                {
-                  "name": "endpoint",
-                  "isMut": false,
                   "isSigner": false
                 }
               ]
@@ -2620,13 +2638,13 @@ export type MatchingEngine = {
     },
     {
       "code": 6530,
-      "name": "ErrInvalidSourceRouter",
-      "msg": "ErrInvalidSourceRouter"
+      "name": "InvalidSourceRouter",
+      "msg": "InvalidSourceRouter"
     },
     {
       "code": 6531,
-      "name": "ErrInvalidTargetRouter",
-      "msg": "ErrInvalidTargetRouter"
+      "name": "InvalidTargetRouter",
+      "msg": "InvalidTargetRouter"
     },
     {
       "code": 6532,
@@ -2854,12 +2872,27 @@ export const IDL: MatchingEngine = {
           "isSigner": false
         },
         {
-          "name": "routerEndpoint",
+          "name": "routerPath",
           "accounts": [
             {
-              "name": "endpoint",
-              "isMut": false,
-              "isSigner": false
+              "name": "fromEndpoint",
+              "accounts": [
+                {
+                  "name": "endpoint",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ]
+            },
+            {
+              "name": "toEndpoint",
+              "accounts": [
+                {
+                  "name": "endpoint",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ]
             }
           ]
         },
@@ -3183,22 +3216,27 @@ export const IDL: MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -3426,22 +3464,27 @@ export const IDL: MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -3665,18 +3708,6 @@ export const IDL: MatchingEngine = {
           "name": "routerEndpoint",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "localRouterEndpoint",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Local router endpoint PDA.",
-            "",
-            "NOTE: This account may not exist yet. But we need to pass it since it will be the owner of",
-            "the local custody token account.",
-            ""
-          ]
         },
         {
           "name": "localCustodyToken",
@@ -4207,22 +4238,27 @@ export const IDL: MatchingEngine = {
               ]
             },
             {
-              "name": "from",
+              "name": "path",
               "accounts": [
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "to",
-              "accounts": [
+                  "name": "fromEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
+                },
                 {
-                  "name": "endpoint",
-                  "isMut": false,
-                  "isSigner": false
+                  "name": "toEndpoint",
+                  "accounts": [
+                    {
+                      "name": "endpoint",
+                      "isMut": false,
+                      "isSigner": false
+                    }
+                  ]
                 }
               ]
             }
@@ -4370,6 +4406,16 @@ export const IDL: MatchingEngine = {
           ]
         },
         {
+          "name": "toRouterEndpoint",
+          "accounts": [
+            {
+              "name": "endpoint",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
           "name": "executeOrder",
           "accounts": [
             {
@@ -4403,16 +4449,6 @@ export const IDL: MatchingEngine = {
                 {
                   "name": "bestOfferToken",
                   "isMut": true,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "toRouterEndpoint",
-              "accounts": [
-                {
-                  "name": "endpoint",
-                  "isMut": false,
                   "isSigner": false
                 }
               ]
@@ -4599,6 +4635,16 @@ export const IDL: MatchingEngine = {
           ]
         },
         {
+          "name": "toRouterEndpoint",
+          "accounts": [
+            {
+              "name": "endpoint",
+              "isMut": false,
+              "isSigner": false
+            }
+          ]
+        },
+        {
           "name": "executeOrder",
           "accounts": [
             {
@@ -4632,16 +4678,6 @@ export const IDL: MatchingEngine = {
                 {
                   "name": "bestOfferToken",
                   "isMut": true,
-                  "isSigner": false
-                }
-              ]
-            },
-            {
-              "name": "toRouterEndpoint",
-              "accounts": [
-                {
-                  "name": "endpoint",
-                  "isMut": false,
                   "isSigner": false
                 }
               ]
@@ -5428,13 +5464,13 @@ export const IDL: MatchingEngine = {
     },
     {
       "code": 6530,
-      "name": "ErrInvalidSourceRouter",
-      "msg": "ErrInvalidSourceRouter"
+      "name": "InvalidSourceRouter",
+      "msg": "InvalidSourceRouter"
     },
     {
       "code": 6531,
-      "name": "ErrInvalidTargetRouter",
-      "msg": "ErrInvalidTargetRouter"
+      "name": "InvalidTargetRouter",
+      "msg": "InvalidTargetRouter"
     },
     {
       "code": 6532,

@@ -772,17 +772,23 @@ describe("Matching Engine <> Token Router", function () {
                 const ix = await tokenRouter.program.methods
                     .redeemFastFill()
                     .accounts({
-                        payer: payer.publicKey,
                         custodian: { custodian },
-                        vaa,
-                        preparedFill,
-                        preparedCustodyToken: tokenRouter.preparedCustodyTokenAddress(preparedFill),
-                        mint: tokenRouter.mint,
-                        matchingEngineCustodian,
-                        matchingEngineRedeemedFastFill,
-                        matchingEngineRouterEndpoint,
-                        matchingEngineLocalCustodyToken,
-                        matchingEngineProgram,
+                        preparedFill: {
+                            payer: payer.publicKey,
+                            fillVaa: { vaa },
+                            preparedFill,
+                            custodyToken: tokenRouter.preparedCustodyTokenAddress(preparedFill),
+                            usdc: {
+                                mint: tokenRouter.mint,
+                            },
+                        },
+                        matchingEngine: {
+                            custodian: matchingEngineCustodian,
+                            redeemedFastFill: matchingEngineRedeemedFastFill,
+                            toRouterEndpoint: matchingEngineRouterEndpoint,
+                            localCustodyToken: matchingEngineLocalCustodyToken,
+                            program: matchingEngineProgram,
+                        },
                     })
                     .instruction();
 
@@ -836,17 +842,23 @@ describe("Matching Engine <> Token Router", function () {
                 const ix = await tokenRouter.program.methods
                     .redeemFastFill()
                     .accounts({
-                        payer: payer.publicKey,
                         custodian: { custodian },
-                        vaa,
-                        preparedFill,
-                        preparedCustodyToken: tokenRouter.preparedCustodyTokenAddress(preparedFill),
-                        mint: tokenRouter.mint,
-                        matchingEngineCustodian,
-                        matchingEngineRedeemedFastFill,
-                        matchingEngineRouterEndpoint,
-                        matchingEngineLocalCustodyToken,
-                        matchingEngineProgram,
+                        preparedFill: {
+                            payer: payer.publicKey,
+                            fillVaa: { vaa },
+                            preparedFill,
+                            custodyToken: tokenRouter.preparedCustodyTokenAddress(preparedFill),
+                            usdc: {
+                                mint: tokenRouter.mint,
+                            },
+                        },
+                        matchingEngine: {
+                            custodian: matchingEngineCustodian,
+                            redeemedFastFill: matchingEngineRedeemedFastFill,
+                            toRouterEndpoint: matchingEngineRouterEndpoint,
+                            localCustodyToken: matchingEngineLocalCustodyToken,
+                            program: matchingEngineProgram,
+                        },
                     })
                     .instruction();
 

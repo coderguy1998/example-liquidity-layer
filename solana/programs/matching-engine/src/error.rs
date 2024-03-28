@@ -62,11 +62,11 @@ pub enum MatchingEngineError {
     #[msg("InvalidMintRecipient")]
     InvalidMintRecipient,
 
-    #[msg("ErrInvalidSourceRouter")]
-    ErrInvalidSourceRouter,
+    #[msg("InvalidSourceRouter")]
+    InvalidSourceRouter,
 
-    #[msg("ErrInvalidTargetRouter")]
-    ErrInvalidTargetRouter,
+    #[msg("InvalidTargetRouter")]
+    InvalidTargetRouter,
 
     #[msg("TokenRouterProgramIdRequired")]
     TokenRouterProgramIdRequired,
