@@ -6,7 +6,10 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token;
-use common::messages::raw::LiquidityLayerMessage;
+use common::{
+    constants::VAA_AUCTION_EXPIRATION_TIME,
+    messages::raw::LiquidityLayerMessage
+};
 
 #[derive(Accounts)]
 #[instruction(offer_price: u64)]
@@ -106,6 +109,10 @@ pub fn place_initial_offer(ctx: Context<PlaceInitialOffer>, offer_price: u64) ->
         require!(
             deadline == 0 || unix_timestamp < deadline,
             MatchingEngineError::FastMarketOrderExpired,
+        );
+        require!(
+            unix_timestamp < (fast_vaa.timestamp() + VAA_AUCTION_EXPIRATION_TIME).into(),
+            MatchingEngineError::FastMarketOrderExpired
         );
 
         slot
